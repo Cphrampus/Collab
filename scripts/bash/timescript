@@ -1,0 +1,79 @@
+#document.getElementsByClassName("yt-uix-button yt-uix-button-size-default yt-uix-button-default load-more-button yt-uix-load-more browse-items-load-more-button")[0].click(); javascript to press load more button, not sure how to make it clicked when grabbing the file
+
+
+
+
+
+
+#make directory to store all temp files in
+mkdir -p tscript
+cd tscript
+
+#search for "timestamp" in html, which will pull in the info for each videos, but must be copied into a file first
+grep \"timestamp\" ../html | 
+
+#run timestamp results through to grab the smallest section containing all times
+awk '{print $9 $10 $11}' | 
+
+#split on > and return second field
+cut -d ">" -f2 | 
+
+#split on < and return first field, store so the time can be parsed
+cut -d "<" -f1 > times0
+
+#get lines without hours, add 0 for consistant parsing
+awk '!/.:..:../ {print "0:"$0;next}{print $0}' times0 > times
+
+#split on : to get minutes
+cut -d ":" -f1 times > hours
+
+#split on : to get minutes
+cut -d ":" -f2 times > minutes
+
+#split time and get seconds
+cut -d ":" -f3 times > seconds
+
+#initialize counter
+count=0
+numvids=0
+
+#read in hours file
+while read s
+do
+	((count+=$s))
+	((numvids++))
+done < hours
+
+#convert to minutes
+((count*=60))
+
+sed 's/^0$/00/' minutes | sed 's/^0//' > minutes0
+#read in minutes file
+while read s
+do
+	((count+=$s))
+done < minutes0
+
+#convert to seconds
+((count*=60))
+
+#remove all leading zeros in seconds file
+sed 's/^0//' seconds > seconds0
+
+#read in seconds file
+while read s
+do
+	((count+=$s))
+done < seconds0
+
+printf "%d video" $numvids
+if [ $numvids -gt 1 ]
+then
+printf "s"
+fi
+
+printf "\nhh:mm:ss\n%02d:%02d:%02d" `expr $count / 3600` `expr $count % 3600 / 60` `expr $count % 60`
+
+cd ..
+#clean up files
+#rm -r tscript

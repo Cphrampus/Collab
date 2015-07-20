@@ -1,0 +1,4 @@
+use test
+SET @count=0;
+UPDATE `anime` SET `anime`.`id` = @count:= @count + 1;
+ALTER TABLE `anime` AUTO_INCREMENT = 1;

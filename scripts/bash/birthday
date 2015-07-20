@@ -1,0 +1,55 @@
+#!/bin/bash
+function happy_birthday(){
+#get cake
+#light candles
+#open gifts
+i=0
+#while cake_count>i
+output=''
+for i in {1..4}
+do
+	output=$output"Happy Birthday "
+	if [ $i -eq 3 ]
+	then
+		output=$output"Dear "$USER"\n"
+	else
+		output=$output"to you "
+		echo -e $output
+		output=''
+	fi
+done
+}
+
+today=$(date +%j)
+birthday=''
+day="$*"
+
+if [ $# -eq 0 ]
+then
+	echo -e "No arguments given\nUsing default"
+	day="10 Aug"
+elif [ $1 = "help" ]
+then
+	echo "Usage:"
+	echo "./birthday [day] [month] or"
+	echo "./birthday [month] [day]"
+elif [ ! `date --date="$day" +%j` ]
+then
+	echo -e "Enter date in format dd MMM\n\te.g. 22 Sep\nor MMM dd\n\te.g. Sep 22"
+	exit
+fi
+
+birthday=`date --date="$day" +%j`
+
+if [ "$today" -eq "$birthday" ]
+then
+	happy_birthday
+	echo "Happy Birthday "$USER
+else
+	if [ $today -gt $birthday ]
+	then
+		((birthday+=365))
+	fi
+	((z=${birthday}-${today}))
+	echo "${z} days until "$USER"'s next birthday!"
+fi

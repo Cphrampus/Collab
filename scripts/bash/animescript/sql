@@ -1,0 +1,23 @@
+#!/bin/bash
+mkdir -p asql
+cd asql
+rm -f vals sql
+../animescript $@ |
+tail -n 8 |
+cut -d ":" -f2- | 
+sed 's/^ //' > vals
+echo "use test" > sql
+echo -n "REPLACE INTO anime VALUES(0, " >> sql
+echo -en "'$@'" >> sql
+while IFS=$'\t' read -r -a values
+do 
+	for i in `seq 0 $((${#values[@]}-1))`
+	do 
+		echo -n ", '${values[$i]}'" >> sql
+	done
+done < vals
+echo ");" >> sql
+#cat sql
+mysql < sql
+cd ..
+rm -r asql

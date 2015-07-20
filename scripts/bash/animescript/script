@@ -1,0 +1,115 @@
+#!/bin/bash
+
+if [ $# -lt 1 ]
+then
+	echo "Usage: ./animescript name of anime"
+else
+	
+	mkdir -p ascript
+	cd ascript
+	
+	base='http://www.animenewsnetwork.com/encyclopedia'
+	query='/search/name?only=anime&q='
+	name=`echo $@ |
+	sed 's/ /+/g'`
+	res=''
+	for word in `echo $@`
+	do
+		word=${word,,}
+		word=${word^}
+		res=$res' '$word
+	done	
+#echo $base$query$name
+	wget -O search "$base$query$name" > /dev/null
+ #echo $res
+	res=`echo $res |
+	sed 's/[aeioucny]/[[=&=]]/g'`
+	page=(`sed -r 's/<(\/[ib]|[ib])>//g' search |
+			grep -i "encyclopedia/anime.php?id=.*\`echo $res\` (TV)" |
+			cut -d "\"" -f 2 |
+			head -n 1 |
+			cut -d "/" -f3`)
+#echo page: $page" here"
+	if [ -z "$page" ]
+	then
+		echo -e $res" not found.\nExiting..."
+		exit
+	fi
+	wget -O pagehtml $base/$page > /dev/null
+	
+#echo $base$page
+	
+	runtime=`grep -A 1 "Running time:" pagehtml |
+	grep "<span>" |
+	cut -d ">" -f2 |
+	cut -d "<" -f1`
+	if [ -z "$runtime" ]
+	then
+		echo "episode length not found, assuming 30 minutes"
+		runtime=30
+	else
+		runtime=`echo $runtime |
+		awk '{print $1}'`
+	fi
+	var=`grep -A 1 "Number of episodes:" pagehtml |
+	tail -n 1`
+	
+	if [ -z "$var" ]
+	then
+		numep=`grep "Episode titles:" pagehtml |
+		cut -d ">" -f4 |
+		cut -d "<" -f1 |
+		awk '{print $3}'`
+	else
+		numep=`echo $var |
+		cut -d ">" -f2 |
+		cut -d "<" -f1`
+	fi
+	vars=(`grep "Seen" pagehtml |
+			sed -r 's/<(b|\/b)>//g;s/<br>/\n/g' |
+			cut -d " " -f 3- |
+			head --lines=-1 |
+			awk '{print ($1=="part")? $6 $9 : $0}' |
+			sed 's/ (.*//' |
+				tr '#' '\n' |
+				tr ' ' '+' |
+				tr '\n' ' '`)
+	seen=${vars[0]}
+	rank=${vars[1]}
+	med=`echo ${vars[2]} |
+	tr '+' ' '`
+	amean=${vars[3]}
+	wmean=${vars[4]}
+#	printf "%d minutes per episode.\n%d episodes.\n" $runtime $numep
+	total=`expr $runtime \* $numep`
+	hours=`expr $total / 60`
+	minutes=`expr $total % 60`
+#	printf "Approximately "
+#	if [ $hours -ge 1 ]
+#	then
+#		printf "%d hour" $hours
+#	fi
+#	if [ $hours -ge 2 ]
+#	then
+#		printf "s "
+#	else
+#		printf " "
+#	fi
+#
+#	if [ $minutes -ge 1 ]
+#	then
+#		printf "%d minute" $minutes
+#	fi
+#	if [ $hours -ge 2 ]
+#	then
+#		printf "s "
+#	else
+#		printf " "
+#	fi
+#
+#	printf "to watch.\n"
+	printf "Name: %s\nNumber of Episodes: %d\nEpisode length(minutes): %d\nSeen by: %d\nSeen by ranking: %d\nMedian ranking: %s\nArithmatic mean: %5.3f\nWeighted mean: %5.3f\nTime to watch(hours minutes): %0d:%02d\n" "`echo $@`" $numep $runtime $seen $rank "$med" $amean $wmean $hours $minutes
+# use cut -d ":" -f2- out | sed 's/^ //' to get each field
+	cd ..
+	rm -r ascript
+fi
